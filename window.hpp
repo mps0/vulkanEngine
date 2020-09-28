@@ -1,8 +1,10 @@
 #ifndef WINDOW_HPP 
 #define WINDOW_HPP 
 
+#include <vector>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
+
 
 
 #define SCREEN_WIDTH 600
@@ -13,6 +15,7 @@ class Window {
     public:
         Window(); 
         ~Window();
+        std::vector<const char*>getRequiredVulkanExtensions(bool print);
 
     private:
         SDL_Window* SDLwindow;

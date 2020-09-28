@@ -1,4 +1,3 @@
-#include <vector>
 #include <stdexcept>
 #include <iostream>
 
@@ -9,6 +8,9 @@ Window::Window() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS); 
     SDLwindow =SDL_CreateWindow("vulkan test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_VULKAN);
 
+}
+
+std::vector<const char*> Window::getRequiredVulkanExtensions(bool print) {
 
     unsigned int extensionCount;
     SDL_Vulkan_GetInstanceExtensions(SDLwindow, &extensionCount, nullptr);
@@ -16,11 +18,15 @@ Window::Window() {
     if (!SDL_Vulkan_GetInstanceExtensions(SDLwindow, &extensionCount, extensions.data())) {
         std::runtime_error("failed to get SDL_Vulkan extensions.");
     };
+
+    if (print) {
     std::cout << "SDL_Vulkan required extensions:\n";
     for(const char* extension : extensions) {
         std::cout << '\t' << extension << '\n';
     }
+    }
 
+    return extensions;
 }
 
 Window::~Window() {

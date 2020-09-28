@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS=-std=c++17
-LDFLAGS=-lSDL2
+LDFLAGS=-lSDL2 -lvulkan
 
 src=$(wildcard *.cpp)
 obj=$(src:.cpp=.o)
