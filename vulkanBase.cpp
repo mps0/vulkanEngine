@@ -17,7 +17,7 @@ void VulkanBase::createInstance() {
     appInfo.apiVersion = VK_API_VERSION_1_2;
 
     std::vector<VkLayerProperties> availableLayers = getAvailableLayers(false);
-    std::vector<const char*> requiredLayers = getRequiredLayers(false);
+    requiredLayers = getRequiredLayers(false);
 
     for(const char* rLayer : requiredLayers) {
         for(VkLayerProperties aLayer : availableLayers) {
@@ -30,7 +30,7 @@ void VulkanBase::createInstance() {
     }
 
     std::vector<VkExtensionProperties> availableExtensions = getAvailableExtensions(false);
-    std::vector<const char*> requiredExtensions = getRequiredExtensions(false);
+    requiredExtensions = getRequiredExtensions(false);
 
     for(const char* rExtension : requiredExtensions) {
         for(VkExtensionProperties aExtension : availableExtensions) {
@@ -87,6 +87,11 @@ std::vector<const char*> VulkanBase::getRequiredLayers(bool print) {
     return requiredLayers;
 }
 
+std::vector<const char*> VulkanBase::getRequiredExtensions(bool print) {
+
+    return pWindow->getRequiredVulkanExtensions(print);
+}
+
 std::vector<VkExtensionProperties> VulkanBase::getAvailableExtensions(bool print) {
 
     unsigned int extensionCount;
@@ -103,12 +108,74 @@ std::vector<VkExtensionProperties> VulkanBase::getAvailableExtensions(bool print
     return extensionProperties;
 }
 
-std::vector<const char*> VulkanBase::getRequiredExtensions(bool print) {
 
-    return pWindow->getRequiredVulkanExtensions(print);
+void VulkanBase::createLogicalDevice() {
+
+    VkPhysicalDevice physicalDevice;
+    uint32_t queueFamilyIdx;
+    getSuitablePhysicalDevice(physicalDevice, queueFamilyIdx, true);
+
+    float queuePriority = 1.f;
+    VkDeviceQueueCreateInfo queueInfo = {};
+    queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueInfo.pNext = nullptr;
+    queueInfo.queueFamilyIndex = queueFamilyIdx;
+    queueInfo.queueCount = 1;
+    queueInfo.pQueuePriorities = &queuePriority;
+
+    VkDeviceCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pNext = nullptr;
+    createInfo.queueCreateInfoCount = 1;
+    createInfo.pQueueCreateInfos = &queueInfo;
+    createInfo.enabledLayerCount = requiredLayers.size();
+    createInfo.ppEnabledLayerNames = requiredLayers.data();
+    createInfo.enabledExtensionCount = requiredExtensions.size();
+    createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+    createInfo.pEnabledFeatures = nullptr;
+
+    if(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
+        std::runtime_error("failed to create logical device.");
+    }
+}
+
+void VulkanBase::getSuitablePhysicalDevice(VkPhysicalDevice &physicalDevice, uint32_t &queueFamilyIdx, bool print) {
+
+    std::vector<const char*> requiredQueues;
+    requiredQueues.push_back("VK_QUEUE_GRAPHICS_BIT");
+
+    unsigned int deviceCount;
+    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+    std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
+    vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data());
+
+    std::vector<VkPhysicalDeviceProperties> physicalDeviceProperties(deviceCount);
+
+    for(size_t i = 0; i < deviceCount; i++) {
+        vkGetPhysicalDeviceProperties(physicalDevices[i], &physicalDeviceProperties[i]);
+    }
+
+    for(size_t i = 0; i < deviceCount; i++) {
+        unsigned int queueCount;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueCount, nullptr);
+        std::vector<VkQueueFamilyProperties> queueProperties(queueCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueCount, queueProperties.data());
+        //for(VkQueueFamilyProperties qP : queueProperties) {
+        for(size_t k = 0; k < queueCount; k++) {
+            if(queueProperties[k].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+                if(print) {
+                    std::cout << "Found suitable device: " << physicalDeviceProperties[i].deviceName << '\n';
+                }
+                physicalDevice = physicalDevices[i];
+                queueFamilyIdx = static_cast<uint32_t>(k);
+            } 
+        }
+    }
+    std::runtime_error("Could not find suitable physical device.");
 }
 
 void VulkanBase::cleanUp() {
+    //vkDestroyDevice(device, nullptr); //causing seg fault?
     vkDestroyInstance(instance, nullptr);
 
 }

@@ -17,12 +17,18 @@ class VulkanBase {
         std::vector<const char*>getRequiredLayers(bool print);
         std::vector<VkExtensionProperties>getAvailableExtensions(bool print);
         std::vector<const char*>getRequiredExtensions(bool print);
+        
+        void createLogicalDevice();
+        void getSuitablePhysicalDevice(VkPhysicalDevice &physicalDevice, uint32_t &queueFamilyIdx, bool print);
         void cleanUp();
 
     private:
         Window* pWindow;
         VkInstance instance;
+        VkDevice device;
         bool enableValidationLayers;
+        std::vector<const char*> requiredLayers;
+        std::vector<const char*> requiredExtensions;
 };
 
 

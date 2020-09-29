@@ -4,12 +4,12 @@
 #include <iostream>
 
 
-
 int main() {
 
     Window window = Window();
     VulkanBase base = VulkanBase(&window, true);
     base.createInstance();
+    base.createLogicalDevice();
 
     SDL_Event event;
     bool run = true;
