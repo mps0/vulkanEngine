@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <cstring>
+#include <set>
+#include <stdexcept>
 
 VulkanBase::VulkanBase(Window* pWindow, bool enableValidationLayers) : pWindow(pWindow), enableValidationLayers(enableValidationLayers) {};
 
@@ -20,26 +22,34 @@ void VulkanBase::createInstance() {
     requiredLayers = getRequiredLayers(false);
 
     for(const char* rLayer : requiredLayers) {
+        bool foundLayer = false;
         for(VkLayerProperties aLayer : availableLayers) {
             if(strcmp(rLayer, aLayer.layerName) == 0) {
                 std::cout << "Found required layer: " << rLayer << '\n';
-                break;
             }
+            foundLayer = true;
+            break;
         }
-        std::runtime_error("Could not find required layer.");
+        if (!foundLayer) {
+        throw std::runtime_error("Could not find required layer.");
+        }
     }
 
     std::vector<VkExtensionProperties> availableExtensions = getAvailableExtensions(false);
     requiredExtensions = getRequiredExtensions(false);
 
     for(const char* rExtension : requiredExtensions) {
+        bool foundExtension = false;
         for(VkExtensionProperties aExtension : availableExtensions) {
             if(strcmp(rExtension, aExtension.extensionName) == 0) {
                 std::cout << "Found required extension: " << rExtension << '\n';
+        foundExtension = true;
                 break;
             }
         }
-        std::runtime_error("Could not find required extension.");
+        if (!foundExtension) {
+        throw std::runtime_error("Could not find required extension.");
+        }
     }
 
     VkInstanceCreateInfo instanceInfo = {};    
@@ -52,7 +62,7 @@ void VulkanBase::createInstance() {
     instanceInfo.ppEnabledExtensionNames = requiredExtensions.data();
 
     if(vkCreateInstance(&instanceInfo, nullptr, &instance) != VK_SUCCESS) {
-        std::runtime_error("Could not create instance.");
+        throw std::runtime_error("Could not create instance.");
     }
 }
 
@@ -111,35 +121,42 @@ std::vector<VkExtensionProperties> VulkanBase::getAvailableExtensions(bool print
 
 void VulkanBase::createLogicalDevice() {
 
-    VkPhysicalDevice physicalDevice;
-    uint32_t queueFamilyIdx;
-    getSuitablePhysicalDevice(physicalDevice, queueFamilyIdx, true);
+    findSuitablePhysicalDevice(true);
+
+    std::set<uint32_t> uniqueQueues = {graphicsQueueIndex, presentQueueIndex};
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
     float queuePriority = 1.f;
+    for(uint32_t queue : uniqueQueues) {
     VkDeviceQueueCreateInfo queueInfo = {};
     queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueInfo.pNext = nullptr;
-    queueInfo.queueFamilyIndex = queueFamilyIdx;
+    queueInfo.queueFamilyIndex = queue;
     queueInfo.queueCount = 1;
     queueInfo.pQueuePriorities = &queuePriority;
+    queueCreateInfos.push_back(queueInfo);
+    }
 
     VkDeviceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pNext = nullptr;
-    createInfo.queueCreateInfoCount = 1;
-    createInfo.pQueueCreateInfos = &queueInfo;
+    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.enabledLayerCount = requiredLayers.size();
     createInfo.ppEnabledLayerNames = requiredLayers.data();
-    createInfo.enabledExtensionCount = requiredExtensions.size();
-    createInfo.ppEnabledExtensionNames = requiredExtensions.data();
+    createInfo.enabledExtensionCount = 0;
+    createInfo.ppEnabledExtensionNames = nullptr;
     createInfo.pEnabledFeatures = nullptr;
 
+
     if(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
-        std::runtime_error("failed to create logical device.");
-    }
+       throw std::runtime_error("failed to create logical device.");
+    } 
+    vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
+    vkGetDeviceQueue(device, presentQueueIndex, 0, &presentQueue);
 }
 
-void VulkanBase::getSuitablePhysicalDevice(VkPhysicalDevice &physicalDevice, uint32_t &queueFamilyIdx, bool print) {
+void VulkanBase::findSuitablePhysicalDevice(bool print) {
 
     std::vector<const char*> requiredQueues;
     requiredQueues.push_back("VK_QUEUE_GRAPHICS_BIT");
@@ -155,27 +172,47 @@ void VulkanBase::getSuitablePhysicalDevice(VkPhysicalDevice &physicalDevice, uin
         vkGetPhysicalDeviceProperties(physicalDevices[i], &physicalDeviceProperties[i]);
     }
 
+    bool foundGraphicsQueue = false;
+    bool foundPresentQueue = false;
+    unsigned int physicalDeviceIdx;
     for(size_t i = 0; i < deviceCount; i++) {
         unsigned int queueCount;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueCount, nullptr);
         std::vector<VkQueueFamilyProperties> queueProperties(queueCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueCount, queueProperties.data());
-        //for(VkQueueFamilyProperties qP : queueProperties) {
         for(size_t k = 0; k < queueCount; k++) {
             if(queueProperties[k].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-                if(print) {
-                    std::cout << "Found suitable device: " << physicalDeviceProperties[i].deviceName << '\n';
-                }
                 physicalDevice = physicalDevices[i];
-                queueFamilyIdx = static_cast<uint32_t>(k);
+                physicalDeviceIdx = i;
+                graphicsQueueIndex = static_cast<uint32_t>(k);
+                foundGraphicsQueue = true;
             } 
+            VkBool32 presentSupport;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevices[i], static_cast<uint32_t>(k), surface, &presentSupport);
+            if(presentSupport) {
+                presentQueueIndex = static_cast<uint32_t>(k);
+                foundPresentQueue = true;
+            }
         }
     }
-    std::runtime_error("Could not find suitable physical device.");
+    if (!foundGraphicsQueue && !foundPresentQueue) {
+    throw std::runtime_error("Could not find suitable physical device.");
+    }
+    if(print) {
+        std::cout << "Found suitable device: " << physicalDeviceProperties[physicalDeviceIdx].deviceName << '\n';
+    }
+}
+
+void VulkanBase::createSurface() {
+
+    if(SDL_Vulkan_CreateSurface(pWindow->getWindow(), instance, &surface) != SDL_TRUE) {
+        throw std::runtime_error("Could not create surface.");
+    }
 }
 
 void VulkanBase::cleanUp() {
-    //vkDestroyDevice(device, nullptr); //causing seg fault?
+    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
 
 }
