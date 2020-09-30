@@ -15,20 +15,27 @@ class VulkanBase {
         void createInstance();
         std::vector<VkLayerProperties>getAvailableLayers(bool print);
         std::vector<const char*>getRequiredLayers(bool print);
-        std::vector<VkExtensionProperties>getAvailableExtensions(bool print);
-        std::vector<const char*>getRequiredExtensions(bool print);
+        std::vector<VkExtensionProperties>getAvailableInstanceExtensions(bool print);
+        std::vector<const char*>getRequiredInstanceExtensions(bool print);
 
         void createSurface();
         void findSuitablePhysicalDevice(bool print);
+        bool checkPhysicalDeviceExtensions(bool print);
         void createLogicalDevice();
 
+        void createSwapchain();
+        VkSurfaceFormatKHR getSurfaceFormat();
+        uint32_t getMinImageCount(VkSurfaceCapabilitiesKHR surfaceCapabilities);
+        VkExtent2D getSwapExtent(VkSurfaceCapabilitiesKHR surfaceCapabilities);
+        VkPresentModeKHR getPresentMode();
 
         void cleanUp();
 
     private:
         bool enableValidationLayers;
         std::vector<const char*> requiredLayers;
-        std::vector<const char*> requiredExtensions;
+        std::vector<const char*> requiredInstanceExtensions;
+        std::vector<const char*> requiredDeviceExtensions = {"VK_KHR_swapchain"};
         uint32_t graphicsQueueIndex;
         uint32_t presentQueueIndex;
 
@@ -39,6 +46,7 @@ class VulkanBase {
         VkSurfaceKHR surface;
         VkQueue graphicsQueue;
         VkQueue presentQueue;
+        VkSwapchainKHR swapchain;
 };
 
 

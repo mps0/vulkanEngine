@@ -9,7 +9,9 @@ int main() {
     Window window = Window();
     VulkanBase base = VulkanBase(&window, true);
     base.createInstance();
+    base.createSurface();
     base.createLogicalDevice();
+    base.createSwapchain();
 
     SDL_Event event;
     bool run = true;
@@ -25,4 +27,5 @@ int main() {
         }
     }
     base.cleanUp();
+    SDL_Quit();
 }
