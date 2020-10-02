@@ -32,6 +32,7 @@ class VulkanBase {
 
         void createImageViews();
         void createCommandBuffers(); 
+        void createDepthBuffer();
 
         void cleanUp();
 
@@ -57,6 +58,9 @@ class VulkanBase {
         std::vector<VkImageView> swapchainImageViews;
         std::vector<VkCommandPool> commandPools;
         std::vector<VkCommandBuffer> commandBuffers;
+        VkImage depthImage;
+        VkDeviceMemory depthMemory;
+        VkImageView depthImageView;
 };
 
 

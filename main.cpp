@@ -14,6 +14,7 @@ int main() {
     base.createSwapchain();
     base.createImageViews();
     base.createCommandBuffers();
+    base.createDepthBuffer();
 
     SDL_Event event;
     bool run = true;

@@ -382,13 +382,72 @@ void VulkanBase::createCommandBuffers() {
         } 
         i++;
     }
+}
 
+void VulkanBase::createDepthBuffer() {
 
+    VkImageCreateInfo depthImageCreateInfo = {};
+    depthImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    depthImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    depthImageCreateInfo.format = VK_FORMAT_D16_UNORM;
+    depthImageCreateInfo.extent.width = SCREEN_WIDTH;
+    depthImageCreateInfo.extent.height = SCREEN_HEIGHT;
+    depthImageCreateInfo.extent.depth = 1;
+    depthImageCreateInfo.mipLevels = 1;
+    depthImageCreateInfo.arrayLayers = 1;
+    depthImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    depthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthImageCreateInfo.queueFamilyIndexCount = 0;
+    depthImageCreateInfo.pQueueFamilyIndices = nullptr;
+    depthImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+    if(vkCreateImage(device, &depthImageCreateInfo, nullptr, &depthImage) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create depth image.");
+    }
+    VkMemoryRequirements depthMemRequirements;
+    vkGetImageMemoryRequirements(device, depthImage, &depthMemRequirements);
+
+    VkPhysicalDeviceMemoryProperties physicalDeviceMemProps;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemProps);
+
+    VkMemoryAllocateInfo depthMemAlloc = {};
+    depthMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    depthMemAlloc.allocationSize = depthMemRequirements.size;
+    depthMemAlloc.memoryTypeIndex = physicalDeviceMemProps.memoryTypes->heapIndex;
+
+    if(vkAllocateMemory(device, &depthMemAlloc, nullptr, &depthMemory) != VK_SUCCESS) {
+        throw std::runtime_error("Could not allocate memory for depth image.");
+    }
+    if(vkBindImageMemory(device, depthImage, depthMemory, 0) != VK_SUCCESS) {
+        throw std::runtime_error("Could not bind depth memory to depth image.");
+    }
+
+    VkImageViewCreateInfo depthImageViewCreateInfo = {};
+    depthImageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    depthImageViewCreateInfo.image = depthImage;
+    depthImageViewCreateInfo.format = VK_FORMAT_D16_UNORM;
+    depthImageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    depthImageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    depthImageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    depthImageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    depthImageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    depthImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+    depthImageViewCreateInfo.subresourceRange.levelCount = 1;
+    depthImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+    depthImageViewCreateInfo.subresourceRange.layerCount = 1;
+    depthImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+    if(vkCreateImageView(device, &depthImageViewCreateInfo, nullptr, &depthImageView) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create depth image view.");
+    }
 }
 
 
 void VulkanBase::cleanUp() {
+    vkDestroyImageView(device, depthImageView, nullptr);
+    vkDestroyImage(device, depthImage, nullptr);
+    vkFreeMemory(device, depthMemory, nullptr);
     for(VkCommandPool commandPool : commandPools) {
         vkDestroyCommandPool(device, commandPool, nullptr);
     }
