@@ -12,6 +12,7 @@ int main() {
     base.createSurface();
     base.createLogicalDevice();
     base.createSwapchain();
+    base.createImageViews();
 
     SDL_Event event;
     bool run = true;

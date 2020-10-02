@@ -29,6 +29,8 @@ class VulkanBase {
         VkExtent2D getSwapExtent(VkSurfaceCapabilitiesKHR surfaceCapabilities);
         VkPresentModeKHR getPresentMode();
 
+        void createImageViews();
+
         void cleanUp();
 
     private:
@@ -47,6 +49,9 @@ class VulkanBase {
         VkQueue graphicsQueue;
         VkQueue presentQueue;
         VkSwapchainKHR swapchain;
+        VkSurfaceFormatKHR surfaceFormat;
+        std::vector<VkImage> swapchainImages;
+        std::vector<VkImageView> swapchainImageViews;
 };
 
 
