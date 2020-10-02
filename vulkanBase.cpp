@@ -4,6 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <algorithm>
+#include <glm/glm.hpp>
 
 VulkanBase::VulkanBase(Window* pWindow, bool enableValidationLayers) : pWindow(pWindow), enableValidationLayers(enableValidationLayers) {};
 
@@ -441,6 +442,16 @@ void VulkanBase::createDepthBuffer() {
     if(vkCreateImageView(device, &depthImageViewCreateInfo, nullptr, &depthImageView) != VK_SUCCESS) {
         throw std::runtime_error("Could not create depth image view.");
     }
+}
+
+void VulkanBase::createUniformBuffer() {
+
+        model = glm::mat4(1.f);
+        projection = glm::perspective(45.f, 1.f, 0.1f, 100.f);
+
+        MVP = projection * view * model;
+
+
 }
 
 

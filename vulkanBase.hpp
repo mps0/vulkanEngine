@@ -2,12 +2,13 @@
 #define VULKANBASE_HPP
 
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
 
 #include <vector>
 #include <set>
 
 #include "window.hpp"
-
+#include "camera.hpp"
 
 
 class VulkanBase {
@@ -33,6 +34,8 @@ class VulkanBase {
         void createImageViews();
         void createCommandBuffers(); 
         void createDepthBuffer();
+
+        void createUniformBuffer();
 
         void cleanUp();
 
@@ -61,6 +64,13 @@ class VulkanBase {
         VkImage depthImage;
         VkDeviceMemory depthMemory;
         VkImageView depthImageView;
+
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 projection;
+        glm::mat4 MVP;
+
+        Camera cam = Camera(&view);
 };
 
 
