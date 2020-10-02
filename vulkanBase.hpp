@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include <vector>
+#include <set>
 
 #include "window.hpp"
 
@@ -30,6 +31,7 @@ class VulkanBase {
         VkPresentModeKHR getPresentMode();
 
         void createImageViews();
+        void createCommandBuffers(); 
 
         void cleanUp();
 
@@ -40,6 +42,7 @@ class VulkanBase {
         std::vector<const char*> requiredDeviceExtensions = {"VK_KHR_swapchain"};
         uint32_t graphicsQueueIndex;
         uint32_t presentQueueIndex;
+        std::set<uint32_t> uniqueQueues = {graphicsQueueIndex, presentQueueIndex};
 
         Window* pWindow;
         VkInstance instance;
@@ -52,6 +55,8 @@ class VulkanBase {
         VkSurfaceFormatKHR surfaceFormat;
         std::vector<VkImage> swapchainImages;
         std::vector<VkImageView> swapchainImageViews;
+        std::vector<VkCommandPool> commandPools;
+        std::vector<VkCommandBuffer> commandBuffers;
 };
 
 

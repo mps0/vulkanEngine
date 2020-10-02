@@ -13,6 +13,7 @@ int main() {
     base.createLogicalDevice();
     base.createSwapchain();
     base.createImageViews();
+    base.createCommandBuffers();
 
     SDL_Event event;
     bool run = true;

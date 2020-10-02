@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <cstring>
-#include <set>
 #include <stdexcept>
 #include <algorithm>
 
@@ -124,7 +123,6 @@ void VulkanBase::createLogicalDevice() {
 
     findSuitablePhysicalDevice(true);
 
-    std::set<uint32_t> uniqueQueues = {graphicsQueueIndex, presentQueueIndex};
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 
     float queuePriority = 1.f;
@@ -359,8 +357,41 @@ void VulkanBase::createImageViews() {
     }
 }
 
+void VulkanBase::createCommandBuffers() {
+
+    commandPools.resize(uniqueQueues.size());
+    commandBuffers.resize(uniqueQueues.size()); //note just have 1 command buffer per queue family!
+    size_t i = 0;
+    for(uint32_t queue : uniqueQueues) {
+        VkCommandPoolCreateInfo commandPoolCreateInfo = {};
+        commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        commandPoolCreateInfo.queueFamilyIndex = queue;
+
+        if(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPools[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create command pool."); 
+        }
+
+        VkCommandBufferAllocateInfo commandBufferAllocateInfo = {}; 
+        commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        commandBufferAllocateInfo.commandPool = commandPools[i];
+        commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        commandBufferAllocateInfo.commandBufferCount = 1;
+
+        if(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Could not allocate command buffers.");
+        } 
+        i++;
+    }
+
+
+
+}
+
 
 void VulkanBase::cleanUp() {
+    for(VkCommandPool commandPool : commandPools) {
+        vkDestroyCommandPool(device, commandPool, nullptr);
+    }
     for (VkImageView imageView : swapchainImageViews) {
         vkDestroyImageView(device, imageView, nullptr);
     }
