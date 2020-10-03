@@ -37,6 +37,8 @@ class VulkanBase {
         void getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryFlagBitMask, uint32_t &memoryTypeIndex);
         void createUniformBuffer();
         void createDescriptorSet();
+        void createRenderPass();
+
 
         void cleanUp();
 
@@ -64,6 +66,7 @@ class VulkanBase {
         std::vector<VkCommandBuffer> commandBuffers;
 
         VkImage depthImage;
+        VkFormat depthFormat;
         VkDeviceMemory depthMemory;
         VkImageView depthImageView;
 
@@ -79,6 +82,8 @@ class VulkanBase {
         VkDescriptorPool descriptorPool;
         VkPipelineLayout pipelineLayout;
         std::vector<VkDescriptorSet> descriptorSets;
+
+        VkRenderPass renderPass;
 
 
 };

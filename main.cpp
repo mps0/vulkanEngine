@@ -17,6 +17,7 @@ int main() {
     base.createDepthBuffer();
     base.createUniformBuffer();
     base.createDescriptorSet();
+    base.createRenderPass();
 
     SDL_Event event;
     bool run = true;

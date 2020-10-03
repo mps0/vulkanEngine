@@ -408,6 +408,8 @@ void VulkanBase::createDepthBuffer() {
     depthImageCreateInfo.pQueueFamilyIndices = nullptr;
     depthImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+    depthFormat = depthImageCreateInfo.format;
+
     if(vkCreateImage(device, &depthImageCreateInfo, nullptr, &depthImage) != VK_SUCCESS) {
         throw std::runtime_error("Could not create depth image.");
     }
@@ -582,8 +584,75 @@ void VulkanBase::createDescriptorSet() {
    vkUpdateDescriptorSets(device, 1, writeDescriptorSets, 0, nullptr);
 }
 
+void VulkanBase::createRenderPass() {
+    VkAttachmentDescription attachmentDescription[2];
+
+    attachmentDescription[0] = {};
+    attachmentDescription[0].format = surfaceFormat.format;
+    attachmentDescription[0].samples = VK_SAMPLE_COUNT_1_BIT; 
+    attachmentDescription[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachmentDescription[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachmentDescription[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachmentDescription[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachmentDescription[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    attachmentDescription[1] = {};
+    attachmentDescription[1].format = depthFormat;
+    attachmentDescription[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachmentDescription[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachmentDescription[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachmentDescription[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachmentDescription[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachmentDescription[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachmentDescription[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference colorRef = {};
+    colorRef.attachment = 0;
+    colorRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthRef = {};
+    depthRef.attachment = 1;
+    depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = nullptr;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorRef;
+    subpass.pResolveAttachments = nullptr;
+    subpass.pDepthStencilAttachment = &depthRef;
+    subpass.preserveAttachmentCount = 0;
+    subpass.pPreserveAttachments = nullptr;
+
+    VkSubpassDependency subpassDependency = {};
+    subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpassDependency.dstSubpass = 0;
+    subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpassDependency.srcAccessMask = 0;
+    subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpassDependency.dependencyFlags = 0;
+
+    VkRenderPassCreateInfo renderPassCreateInfo = {};
+    renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreateInfo.attachmentCount = 2;
+    renderPassCreateInfo.pAttachments = attachmentDescription;
+    renderPassCreateInfo.subpassCount = 1;
+    renderPassCreateInfo.pSubpasses = &subpass;
+    renderPassCreateInfo.dependencyCount = 1;
+    renderPassCreateInfo.pDependencies = &subpassDependency;
+
+    if(vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create render pass.");
+    }
+    
+}
+
 
 void VulkanBase::cleanUp() {
+    vkDestroyRenderPass(device, renderPass, nullptr);
     vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyDescriptorPool(device, descriptorPool, nullptr);
@@ -604,7 +673,6 @@ void VulkanBase::cleanUp() {
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
-
 }
 
 
