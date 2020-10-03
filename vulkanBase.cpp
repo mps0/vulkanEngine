@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <cstring>
+#include <vulkan/vulkan_core.h>
 
 VulkanBase::VulkanBase(Window* pWindow, bool enableValidationLayers) : pWindow(pWindow), enableValidationLayers(enableValidationLayers) {};
 
@@ -507,12 +508,86 @@ void VulkanBase::createUniformBuffer() {
     if(vkBindBufferMemory(device, ubo, uboMemory, 0) != VK_SUCCESS) {
         throw std::runtime_error("Could not bind ubo to memory.");
     }
+}
 
+void VulkanBase::createDescriptorSet() {
 
+    VkDescriptorSetLayoutBinding layoutBinding = {};
+    layoutBinding.binding = 0;
+    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBinding.descriptorCount = 1;
+    layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
+    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutCreateInfo.bindingCount = 1;
+    layoutCreateInfo.pBindings = &layoutBinding;
+
+    if(vkCreateDescriptorSetLayout(device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create descriptor set layout.");
+    }
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+    pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+    pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
+    pipelineLayoutCreateInfo.setLayoutCount = 1;
+    pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
+
+    if(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create pipelinay layout.");
+    }
+
+    
+   VkDescriptorPoolSize poolSizes[1];
+   poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   poolSizes[0].descriptorCount = 1;
+
+   VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
+   descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+   descriptorPoolCreateInfo.maxSets = 1;
+   descriptorPoolCreateInfo.poolSizeCount = 1;
+   descriptorPoolCreateInfo.pPoolSizes = poolSizes;
+
+   if(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+       throw std::runtime_error("Could not create descriptor pool.");
+   }
+
+   VkDescriptorSetAllocateInfo descriptorSetAllocInfo = {};
+   descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   descriptorSetAllocInfo.descriptorPool = descriptorPool;
+   descriptorSetAllocInfo.descriptorSetCount = 1;
+   descriptorSetAllocInfo.pSetLayouts = &descriptorSetLayout;
+
+   descriptorSets.resize(descriptorSetAllocInfo.descriptorSetCount);
+   if(vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, descriptorSets.data()) != VK_SUCCESS) {
+       throw std::runtime_error("Could not allocate descriptor sets.");
+   }
+
+   VkDescriptorBufferInfo uboInfo = {};
+   uboInfo.buffer = ubo;
+   uboInfo.offset = 0;
+   uboInfo.range = sizeof(MVP);
+
+   VkWriteDescriptorSet writeDescriptorSets[1];
+   writeDescriptorSets[0] = {};
+   writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   writeDescriptorSets[0].dstSet = descriptorSets[0];
+   writeDescriptorSets[0].dstBinding = 0;
+   writeDescriptorSets[0].dstArrayElement = 0;
+   writeDescriptorSets[0].descriptorCount = 1;
+   writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   writeDescriptorSets[0].pBufferInfo = &uboInfo;
+
+   vkUpdateDescriptorSets(device, 1, writeDescriptorSets, 0, nullptr);
 }
 
 
 void VulkanBase::cleanUp() {
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
     vkFreeMemory(device, uboMemory, nullptr);
     vkDestroyBuffer(device, ubo, nullptr);
     delete cam;

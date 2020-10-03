@@ -35,8 +35,8 @@ class VulkanBase {
         void createCommandBuffers(); 
         void createDepthBuffer();
         void getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryFlagBitMask, uint32_t &memoryTypeIndex);
-
         void createUniformBuffer();
+        void createDescriptorSet();
 
         void cleanUp();
 
@@ -62,6 +62,7 @@ class VulkanBase {
         std::vector<VkImageView> swapchainImageViews;
         std::vector<VkCommandPool> commandPools;
         std::vector<VkCommandBuffer> commandBuffers;
+
         VkImage depthImage;
         VkDeviceMemory depthMemory;
         VkImageView depthImageView;
@@ -73,7 +74,16 @@ class VulkanBase {
         Camera* cam = new Camera(&view);
         VkBuffer ubo;
         VkDeviceMemory uboMemory;
+
+        VkDescriptorSetLayout descriptorSetLayout;
+        VkDescriptorPool descriptorPool;
+        VkPipelineLayout pipelineLayout;
+        std::vector<VkDescriptorSet> descriptorSets;
+
+
 };
+
+
 
 
 #endif
