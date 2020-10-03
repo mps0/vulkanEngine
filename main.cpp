@@ -15,6 +15,7 @@ int main() {
     base.createImageViews();
     base.createCommandBuffers();
     base.createDepthBuffer();
+    base.createUniformBuffer();
 
     SDL_Event event;
     bool run = true;

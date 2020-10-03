@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <glm/glm.hpp>
+#include <cstring>
 
 VulkanBase::VulkanBase(Window* pWindow, bool enableValidationLayers) : pWindow(pWindow), enableValidationLayers(enableValidationLayers) {};
 
@@ -199,8 +200,11 @@ void VulkanBase::findSuitablePhysicalDevice(bool print) {
     if (!foundGraphicsQueue || !foundPresentQueue || !checkPhysicalDeviceExtensions(true)) {
         throw std::runtime_error("Could not find suitable physical device.");
     }
+
+    uniqueQueues = {graphicsQueueIndex, presentQueueIndex};
+
     if(print) {
-        std::cout << "Found suitable device: " << physicalDeviceProperties[physicalDeviceIdx].deviceName << '\n';
+        std::cout << "Found suitable device: " << physicalDeviceProperties[physicalDeviceIdx].deviceName << std::endl;
     }
 }
 
@@ -412,10 +416,13 @@ void VulkanBase::createDepthBuffer() {
     VkPhysicalDeviceMemoryProperties physicalDeviceMemProps;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemProps);
 
+    uint32_t memoryTypeIndex;
+    getMemoryTypeIndex(physicalDevice, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex);
+
     VkMemoryAllocateInfo depthMemAlloc = {};
     depthMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     depthMemAlloc.allocationSize = depthMemRequirements.size;
-    depthMemAlloc.memoryTypeIndex = physicalDeviceMemProps.memoryTypes->heapIndex;
+    depthMemAlloc.memoryTypeIndex = memoryTypeIndex;
 
     if(vkAllocateMemory(device, &depthMemAlloc, nullptr, &depthMemory) != VK_SUCCESS) {
         throw std::runtime_error("Could not allocate memory for depth image.");
@@ -444,18 +451,71 @@ void VulkanBase::createDepthBuffer() {
     }
 }
 
+void VulkanBase::getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryFlagBitMask, uint32_t &memoryTypeIndex) {
+
+    VkPhysicalDeviceMemoryProperties physicalDeviceMemProps;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemProps);
+
+    for(size_t i = 0; i < physicalDeviceMemProps.memoryTypeCount; i++) {
+       if((physicalDeviceMemProps.memoryTypes[i].propertyFlags & memoryFlagBitMask) == memoryFlagBitMask) {
+            memoryTypeIndex = i;
+            return;
+       } 
+    }
+
+    throw std::runtime_error("Could not find suitable memory type.");
+}
+
 void VulkanBase::createUniformBuffer() {
 
-        model = glm::mat4(1.f);
-        projection = glm::perspective(45.f, 1.f, 0.1f, 100.f);
+    model = glm::mat4(1.f);
+    projection = glm::perspective(45.f, 1.f, 0.1f, 100.f);
+    MVP = projection * view * model;
 
-        MVP = projection * view * model;
+    VkBufferCreateInfo uboCreateInfo = {};
+    uboCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    uboCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    uboCreateInfo.size = sizeof(MVP);
+    uboCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateBuffer(device, &uboCreateInfo, nullptr, &ubo) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create UBO.");
+    }
+
+    VkMemoryRequirements uboMemReqs;
+    vkGetBufferMemoryRequirements(device, ubo, &uboMemReqs);
+
+    uint32_t memoryTypeIndex;
+    getMemoryTypeIndex(physicalDevice, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex);
+
+    VkMemoryAllocateInfo uboAllocInfo = {};
+    uboAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    uboAllocInfo.allocationSize = uboMemReqs.size;
+    uboAllocInfo.memoryTypeIndex = memoryTypeIndex;
+
+    if(vkAllocateMemory(device, &uboAllocInfo, nullptr, &uboMemory) != VK_SUCCESS) {
+        throw std::runtime_error("Could not allocate UBO memory.");
+    }
+
+    void* pData;
+    if(vkMapMemory(device, uboMemory, 0, uboMemReqs.size, 0, &pData)) {
+        throw std::runtime_error("Could not map ubo memory.");
+    }
+
+    std::memcpy(pData, &MVP, sizeof(MVP));
+
+    if(vkBindBufferMemory(device, ubo, uboMemory, 0) != VK_SUCCESS) {
+        throw std::runtime_error("Could not bind ubo to memory.");
+    }
 
 
 }
 
 
 void VulkanBase::cleanUp() {
+    vkFreeMemory(device, uboMemory, nullptr);
+    vkDestroyBuffer(device, ubo, nullptr);
+    delete cam;
     vkDestroyImageView(device, depthImageView, nullptr);
     vkDestroyImage(device, depthImage, nullptr);
     vkFreeMemory(device, depthMemory, nullptr);

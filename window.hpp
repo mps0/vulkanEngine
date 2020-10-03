@@ -16,6 +16,7 @@ class Window {
         Window(); 
         ~Window();
         std::vector<const char*>getRequiredVulkanExtensions(bool print);
+        SDL_Window* getWindow();
 
     private:
         SDL_Window* SDLwindow;

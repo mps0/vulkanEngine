@@ -16,7 +16,7 @@ std::vector<const char*> Window::getRequiredVulkanExtensions(bool print) {
     SDL_Vulkan_GetInstanceExtensions(SDLwindow, &extensionCount, nullptr);
     std::vector<const char*> extensions(extensionCount);
     if (!SDL_Vulkan_GetInstanceExtensions(SDLwindow, &extensionCount, extensions.data())) {
-        std::runtime_error("failed to get SDL_Vulkan extensions.");
+     throw std::runtime_error("failed to get SDL_Vulkan extensions.");
     };
 
     if (print) {
@@ -27,6 +27,10 @@ std::vector<const char*> Window::getRequiredVulkanExtensions(bool print) {
     }
 
     return extensions;
+}
+
+SDL_Window* Window::getWindow() {
+    return  SDLwindow;
 }
 
 Window::~Window() {

@@ -5,5 +5,5 @@ Camera::Camera(glm::mat4* view, glm::vec3 forward, glm::vec3 up, glm::vec3 pos) 
 }
 
 void Camera::updateView() {
-     *view = glm::lookAt(pos, forward + pos, up);
+    *view = glm::lookAt(pos, forward + pos, up);
 }

@@ -34,6 +34,7 @@ class VulkanBase {
         void createImageViews();
         void createCommandBuffers(); 
         void createDepthBuffer();
+        void getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryFlagBitMask, uint32_t &memoryTypeIndex);
 
         void createUniformBuffer();
 
@@ -46,7 +47,7 @@ class VulkanBase {
         std::vector<const char*> requiredDeviceExtensions = {"VK_KHR_swapchain"};
         uint32_t graphicsQueueIndex;
         uint32_t presentQueueIndex;
-        std::set<uint32_t> uniqueQueues = {graphicsQueueIndex, presentQueueIndex};
+        std::set<uint32_t> uniqueQueues;
 
         Window* pWindow;
         VkInstance instance;
@@ -69,8 +70,9 @@ class VulkanBase {
         glm::mat4 view;
         glm::mat4 projection;
         glm::mat4 MVP;
-
-        Camera cam = Camera(&view);
+        Camera* cam = new Camera(&view);
+        VkBuffer ubo;
+        VkDeviceMemory uboMemory;
 };
 
 
