@@ -18,6 +18,9 @@ int main() {
     base.createUniformBuffer();
     base.createDescriptorSet();
     base.createRenderPass();
+    base.createFramebuffers();
+    base.createVertexBuffer();
+    base.createGraphicsPipeline();
 
     SDL_Event event;
     bool run = true;

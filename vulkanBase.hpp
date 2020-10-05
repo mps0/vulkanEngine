@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <set>
+#include <string>
 
 #include "window.hpp"
 #include "camera.hpp"
@@ -38,6 +39,14 @@ class VulkanBase {
         void createUniformBuffer();
         void createDescriptorSet();
         void createRenderPass();
+        void createFramebuffers();
+
+        void createVertexBuffer();
+
+        void createGraphicsPipeline();
+
+
+        
 
 
         void cleanUp();
@@ -60,6 +69,7 @@ class VulkanBase {
         VkQueue presentQueue;
         VkSwapchainKHR swapchain;
         VkSurfaceFormatKHR surfaceFormat;
+
         std::vector<VkImage> swapchainImages;
         std::vector<VkImageView> swapchainImageViews;
         std::vector<VkCommandPool> commandPools;
@@ -84,6 +94,16 @@ class VulkanBase {
         std::vector<VkDescriptorSet> descriptorSets;
 
         VkRenderPass renderPass;
+
+        VkShaderModule vertShaderModule;
+        VkShaderModule fragShaderModule;
+
+        std::vector<VkFramebuffer> framebuffers;
+
+        VkBuffer vertBuffer;
+        VkDeviceMemory vertBufferMemory;
+
+        VkPipeline pipeline;
 
 
 };
