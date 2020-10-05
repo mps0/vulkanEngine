@@ -370,29 +370,87 @@ void VulkanBase::createImageViews() {
 
 void VulkanBase::createCommandBuffers() {
 
-    commandPools.resize(uniqueQueues.size());
-    commandBuffers.resize(uniqueQueues.size()); //note just have 1 command buffer per queue family!
-    size_t i = 0;
-    for(uint32_t queue : uniqueQueues) {
         VkCommandPoolCreateInfo commandPoolCreateInfo = {};
         commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        commandPoolCreateInfo.queueFamilyIndex = queue;
+        commandPoolCreateInfo.queueFamilyIndex = graphicsQueueIndex;
 
-        if(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPools[i]) != VK_SUCCESS) {
+        if(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create command pool."); 
         }
 
         VkCommandBufferAllocateInfo commandBufferAllocateInfo = {}; 
         commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        commandBufferAllocateInfo.commandPool = commandPools[i];
+        commandBufferAllocateInfo.commandPool = commandPool;
         commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         commandBufferAllocateInfo.commandBufferCount = 1;
 
-        if(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffers[i]) != VK_SUCCESS) {
+        if(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("Could not allocate command buffers.");
         } 
-        i++;
+
+        for(VkFramebuffer framebuffer : framebuffers) {
+
+            VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+            commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+            if(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("Could not begin command buffer.");
+
+            }
+
+        VkClearValue clearValues[2];
+        clearValues[0].color = {0.f, 0.f, 0.f, 0.f};
+        clearValues[0].depthStencil.depth = 0.f;
+        VkRenderPassBeginInfo  renderPassBeginInfo = {};
+        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassBeginInfo.renderPass = renderPass;
+        renderPassBeginInfo.framebuffer = framebuffer;
+        renderPassBeginInfo.renderArea.extent.width = SCREEN_WIDTH;
+        renderPassBeginInfo.renderArea.extent.height = SCREEN_HEIGHT;
+        renderPassBeginInfo.clearValueCount = 2;
+        renderPassBeginInfo.pClearValues = clearValues;
+
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, descriptorSets.data(), 0, nullptr);
+    
+    VkDeviceSize offsets;
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer, &offsets);
+    
+    VkViewport viewport = {};
+    viewport.x = 0.f;
+    viewport.y = 0.f;
+    viewport.width = (float) SCREEN_WIDTH;
+    viewport.height = (float) SCREEN_HEIGHT;
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
+
+    VkRect2D scissor;
+    scissor.extent.width = SCREEN_WIDTH;
+    scissor.extent.height = SCREEN_HEIGHT;
+    scissor.offset.x = 0.f;
+    scissor.offset.y = 0.f;
+    
+
+
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    vkCmdDraw(commandBuffer, 12 * 3, 1, 0, 0);
+
+
+    vkCmdEndRenderPass(commandBuffer);
+
+    if(vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("Could not record command buffer.");
     }
+
+
+
+        }    
+
 }
 
 void VulkanBase::createDepthBuffer() {
@@ -886,22 +944,78 @@ void VulkanBase::createGraphicsPipeline() {
     if(vkCreateGraphicsPipelines(device, nullptr, 1,&pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         throw std::runtime_error("Could not create pipeline.");
     }
-
-     
-
-
-
-
-
-
-
-
-
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
 }
 
+        void VulkanBase::draw() {
+
+            uint32_t imageIndex;
+            if(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex) != VK_SUCCESS) {
+                    throw std::runtime_error("Could not aquire next swapchain image.");
+                    }
+
+           VkPipelineStageFlags pipelineStageFlags = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+           VkSubmitInfo submitInfo = {};
+           submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+           submitInfo.waitSemaphoreCount = 1;
+           submitInfo.pWaitSemaphores = &semaphore;
+           submitInfo.pWaitDstStageMask = &pipelineStageFlags;
+           submitInfo.commandBufferCount = 1;
+           submitInfo.pCommandBuffers = &commandBuffer;
+           submitInfo.signalSemaphoreCount = 0;
+           submitInfo.pSignalSemaphores = nullptr;
+
+           vkResetFences(device, 1, &fence);
+
+           if(vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence) != VK_SUCCESS) {
+               throw std::runtime_error("Could not submit draw command buffer");
+           } 
+
+
+           unsigned int result;
+           do {
+               result = vkWaitForFences(device, 1, &fence, VK_TRUE, 100);
+           } while (result == VK_TIMEOUT);
+
+
+           VkPresentInfoKHR presentInfo = {};
+           presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+           presentInfo.swapchainCount = 1;
+           presentInfo.pSwapchains = &swapchain;
+           presentInfo.pImageIndices = &imageIndex;
+           presentInfo.waitSemaphoreCount = 0;
+           presentInfo.pWaitSemaphores = nullptr;
+           presentInfo.pResults = nullptr;
+
+           if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
+               throw std::runtime_error("Could not present.");
+           }
+        }
+
+
+        void VulkanBase::createSyncObjects() {
+    
+            VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+            semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+            if(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore) != VK_SUCCESS) {
+                throw std::runtime_error("Could not create semaphore.");
+            }
+
+
+            VkFenceCreateInfo fenceCreateInfo = {}; 
+            fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+            if(vkCreateFence(device, &fenceCreateInfo, nullptr, &fence) != VK_SUCCESS){
+           throw std::runtime_error("Could not create fence."); 
+            }
+
+        }
+
 void VulkanBase::cleanUp() {
+    vkDestroySemaphore(device, semaphore, nullptr);
+    vkDestroyFence(device, fence, nullptr);
     vkDestroyPipeline(device, pipeline, nullptr);
     vkFreeMemory(device, vertBufferMemory, nullptr);
     vkDestroyBuffer(device, vertBuffer, nullptr);
@@ -919,9 +1033,7 @@ void VulkanBase::cleanUp() {
     vkDestroyImageView(device, depthImageView, nullptr);
     vkDestroyImage(device, depthImage, nullptr);
     vkFreeMemory(device, depthMemory, nullptr);
-    for(VkCommandPool commandPool : commandPools) {
-        vkDestroyCommandPool(device, commandPool, nullptr);
-    }
+    vkDestroyCommandPool(device, commandPool, nullptr);
     for (VkImageView imageView : swapchainImageViews) {
         vkDestroyImageView(device, imageView, nullptr);
     }

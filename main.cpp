@@ -21,6 +21,8 @@ int main() {
     base.createFramebuffers();
     base.createVertexBuffer();
     base.createGraphicsPipeline();
+    base.createSyncObjects();
+            base.draw();
 
     SDL_Event event;
     bool run = true;

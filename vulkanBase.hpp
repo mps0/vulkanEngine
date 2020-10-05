@@ -45,6 +45,10 @@ class VulkanBase {
 
         void createGraphicsPipeline();
 
+        void createSyncObjects();
+
+        void draw();
+
 
         
 
@@ -72,8 +76,8 @@ class VulkanBase {
 
         std::vector<VkImage> swapchainImages;
         std::vector<VkImageView> swapchainImageViews;
-        std::vector<VkCommandPool> commandPools;
-        std::vector<VkCommandBuffer> commandBuffers;
+        VkCommandPool commandPool;
+        VkCommandBuffer commandBuffer;
 
         VkImage depthImage;
         VkFormat depthFormat;
@@ -104,6 +108,9 @@ class VulkanBase {
         VkDeviceMemory vertBufferMemory;
 
         VkPipeline pipeline;
+
+        VkFence fence;
+        VkSemaphore semaphore;
 
 
 };
