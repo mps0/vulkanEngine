@@ -35,10 +35,41 @@ int main() {
                                    break;
                                }
 
+                case SDL_MOUSEMOTION:{
+                                         unsigned int button = SDL_GetMouseState(NULL, NULL);
+                                         if (button & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+                                             //cam->rotate(event.motion.xrel, -event.motion.yrel);
+                                         }
+                                         else if (button & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+                                             //cam->roll(event.motion.xrel);
+                                         }
+                                         break;
+                                     }
+                case SDL_KEYDOWN: {
+                                      switch( event.key.keysym.sym )
+                                      {
+                                          case SDLK_w:
+                                              base.cam->moveForward();
+
+                                              break;
+
+                                          case SDLK_s:
+                                              break;
+
+                                          case SDLK_a:
+                                              break;
+
+                                          case SDLK_d:
+                                              break;
+
+
+                                  }
             }
         }
-            base.draw();
+        }
+        base.draw();
     }
     base.cleanUp();
     SDL_Quit();
 }
+

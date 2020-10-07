@@ -10,9 +10,12 @@ class Camera{
 
     void updateView();
 
+    void moveForward();
+
     private:
     glm::mat4* view;
     glm::vec3 forward, up, pos;
+    float sensitivity = 0.01f;
 
 };
 

@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <glm/glm.hpp>
+#include "glm/gtx/string_cast.hpp"
 #include <cstring>
 #include <fstream>
 
@@ -541,7 +542,7 @@ void VulkanBase::getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t me
 void VulkanBase::createUniformBuffer() {
 
     model = glm::mat4(1.f);
-    projection = glm::perspective(45.f, 1.f, 0.1f, 100.f);
+    projection = glm::perspective(45.f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.f);
     MVP = projection * view * model;
 
     VkBufferCreateInfo uboCreateInfo = {};
@@ -569,6 +570,10 @@ void VulkanBase::createUniformBuffer() {
         throw std::runtime_error("Could not allocate UBO memory.");
     }
 
+    if(vkBindBufferMemory(device, ubo, uboMemory, 0) != VK_SUCCESS) {
+        throw std::runtime_error("Could not bind ubo to memory.");
+    }
+
     void* pData;
     if(vkMapMemory(device, uboMemory, 0, uboMemReqs.size, 0, &pData)) {
         throw std::runtime_error("Could not map ubo memory.");
@@ -576,9 +581,6 @@ void VulkanBase::createUniformBuffer() {
 
     std::memcpy(pData, &MVP, sizeof(MVP));
 
-    if(vkBindBufferMemory(device, ubo, uboMemory, 0) != VK_SUCCESS) {
-        throw std::runtime_error("Could not bind ubo to memory.");
-    }
 }
 
 void VulkanBase::createDescriptorSet() {
@@ -837,14 +839,14 @@ void VulkanBase::createGraphicsPipeline() {
     attribDiscription[0] = {};
     attribDiscription[0].location = 0;
     attribDiscription[0].binding = 0;
-    attribDiscription[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attribDiscription[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attribDiscription[0].offset = 0;
 
     attribDiscription[1] = {};
     attribDiscription[1].location = 1;
     attribDiscription[1].binding = 0;
     attribDiscription[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attribDiscription[1].offset = 8;
+    attribDiscription[1].offset = 12;
 
     VkVertexInputBindingDescription bindingDescription = {};
     bindingDescription.binding = 0;
@@ -909,7 +911,8 @@ void VulkanBase::createGraphicsPipeline() {
 
     VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = {};
     depthStencilStateCreateInfo.sType =  VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
+    //depthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
+    depthStencilStateCreateInfo.depthTestEnable = VK_FALSE;
     depthStencilStateCreateInfo.depthWriteEnable = VK_TRUE;
     depthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     depthStencilStateCreateInfo.depthBoundsTestEnable = VK_FALSE;

@@ -14,6 +14,12 @@
 
 class VulkanBase {
     public:
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 projection;
+        glm::mat4 MVP;
+        Camera* cam = new Camera(&view);
+
         VulkanBase(Window* pWindow, bool enableValidationLayers);
         void createInstance();
         std::vector<VkLayerProperties>getAvailableLayers(bool print);
@@ -84,11 +90,6 @@ class VulkanBase {
         VkDeviceMemory depthMemory;
         VkImageView depthImageView;
 
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 projection;
-        glm::mat4 MVP;
-        Camera* cam = new Camera(&view);
         VkBuffer ubo;
         VkDeviceMemory uboMemory;
 
