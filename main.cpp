@@ -13,16 +13,17 @@ int main() {
     base.createLogicalDevice();
     base.createSwapchain();
     base.createImageViews();
-    base.createCommandBuffers();
     base.createDepthBuffer();
     base.createUniformBuffer();
     base.createDescriptorSet();
     base.createRenderPass();
-    base.createFramebuffers();
     base.createVertexBuffer();
     base.createGraphicsPipeline();
+    base.createFramebuffers();
+    base.createCommandBuffers();
     base.createSyncObjects();
-            base.draw();
+
+    getchar();
 
     SDL_Event event;
     bool run = true;
@@ -36,6 +37,7 @@ int main() {
 
             }
         }
+            base.draw();
     }
     base.cleanUp();
     SDL_Quit();

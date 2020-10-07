@@ -77,7 +77,7 @@ class VulkanBase {
         std::vector<VkImage> swapchainImages;
         std::vector<VkImageView> swapchainImageViews;
         VkCommandPool commandPool;
-        VkCommandBuffer commandBuffer;
+        std::vector<VkCommandBuffer> commandBuffers;
 
         VkImage depthImage;
         VkFormat depthFormat;
@@ -109,8 +109,9 @@ class VulkanBase {
 
         VkPipeline pipeline;
 
-        VkFence fence;
-        VkSemaphore semaphore;
+        VkSemaphore imageAvailableSemaphore;
+        VkSemaphore renderFinishedSemaphore;
+        
 
 
 };
