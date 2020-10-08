@@ -23,8 +23,6 @@ int main() {
     base.createCommandBuffers();
     base.createSyncObjects();
 
-    getchar();
-
     SDL_Event event;
     bool run = true;
     while(run) {
@@ -38,10 +36,13 @@ int main() {
                 case SDL_MOUSEMOTION:{
                                          unsigned int button = SDL_GetMouseState(NULL, NULL);
                                          if (button & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-                                             //cam->rotate(event.motion.xrel, -event.motion.yrel);
+                                             base.cam->yaw(event.motion.xrel);
+                                             base.cam->pitch(event.motion.yrel);
+                                             base.updateMVP();
                                          }
                                          else if (button & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-                                             //cam->roll(event.motion.xrel);
+                                             base.cam->roll(event.motion.xrel);
+                                             base.updateMVP();
                                          }
                                          break;
                                      }
@@ -50,22 +51,26 @@ int main() {
                                       {
                                           case SDLK_w:
                                               base.cam->moveForward();
-
+                                              base.updateMVP();
                                               break;
 
                                           case SDLK_s:
+                                              base.cam->moveBackward();
+                                              base.updateMVP();
                                               break;
 
                                           case SDLK_a:
+                                              base.cam->moveLeft();
+                                              base.updateMVP();
                                               break;
 
                                           case SDLK_d:
+                                              base.cam->moveRight();
+                                              base.updateMVP();
                                               break;
-
-
+                                      }
                                   }
             }
-        }
         }
         base.draw();
     }

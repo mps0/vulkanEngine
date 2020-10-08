@@ -288,7 +288,6 @@ void VulkanBase::createSwapchain() {
     uint32_t swapChainImageCount;
     vkGetSwapchainImagesKHR(device, swapchain, &swapChainImageCount, nullptr);
     swapchainImages.resize(swapChainImageCount);    
-    std::cout<< "swapchain image count: " << swapChainImageCount << std::endl;
     vkGetSwapchainImagesKHR(device, swapchain, &swapChainImageCount, swapchainImages.data());
 }
 
@@ -392,8 +391,6 @@ void VulkanBase::createCommandBuffers() {
             throw std::runtime_error("Could not allocate command buffers.");
         } 
 
-
-        std::cout << "commandbuffer size: " << commandBuffers.size() << std::endl;
         for(size_t i = 0; i < commandBuffers.size(); i++) {
 
             VkCommandBufferBeginInfo commandBufferBeginInfo = {};
@@ -574,13 +571,12 @@ void VulkanBase::createUniformBuffer() {
         throw std::runtime_error("Could not bind ubo to memory.");
     }
 
-    void* pData;
-    if(vkMapMemory(device, uboMemory, 0, uboMemReqs.size, 0, &pData)) {
+    //void* pData;
+    if(vkMapMemory(device, uboMemory, 0, uboMemReqs.size, 0, &pUboData)) {
         throw std::runtime_error("Could not map ubo memory.");
     }
 
-    std::memcpy(pData, &MVP, sizeof(MVP));
-
+    updateMVP();
 }
 
 void VulkanBase::createDescriptorSet() {
@@ -984,9 +980,6 @@ void VulkanBase::createGraphicsPipeline() {
            } 
 
 
-           std::cout << "swap chain image index: " << imageIndex << std::endl;
-              
-
            VkPresentInfoKHR presentInfo = {};
            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
            presentInfo.swapchainCount = 1;
@@ -1018,6 +1011,13 @@ void VulkanBase::createGraphicsPipeline() {
             }
 
         }
+
+//TODO: use push constants instead of ubo buffer
+void VulkanBase::updateMVP() {
+
+    MVP = projection * view * model;
+    std::memcpy(pUboData, &MVP, sizeof(MVP));
+}
 
 void VulkanBase::cleanUp() {
     vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);

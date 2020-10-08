@@ -56,12 +56,13 @@ class VulkanBase {
         void draw();
 
 
-        
+        void updateMVP();        
 
 
         void cleanUp();
 
     private:
+
         bool enableValidationLayers;
         std::vector<const char*> requiredLayers;
         std::vector<const char*> requiredInstanceExtensions;
@@ -92,6 +93,7 @@ class VulkanBase {
 
         VkBuffer ubo;
         VkDeviceMemory uboMemory;
+        void* pUboData;
 
         VkDescriptorSetLayout descriptorSetLayout;
         VkDescriptorPool descriptorPool;
