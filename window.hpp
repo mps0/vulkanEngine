@@ -7,8 +7,8 @@
 
 
 
-#define SCREEN_WIDTH 600
-#define SCREEN_HEIGHT 400
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 
 
 class Window {

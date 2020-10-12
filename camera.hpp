@@ -26,7 +26,7 @@ class Camera{
     glm::vec3 forward, up, pos;
     glm::vec3 u, v, w;
     float sensitivity = 0.1f;
-    float mouseSensitivity = 0.02f;
+    float mouseSensitivity = 0.01f;
 
 };
 

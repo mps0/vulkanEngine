@@ -1,5 +1,4 @@
 #include "vulkanBase.hpp"
-#include "tri.h"
 
 #include <iostream>
 #include <cstring>
@@ -14,7 +13,7 @@
 #include <vulkan/vulkan_core.h>
 
 
-VulkanBase::VulkanBase(Window* pWindow, bool enableValidationLayers) : pWindow(pWindow), enableValidationLayers(enableValidationLayers) {};
+VulkanBase::VulkanBase(Window* pWindow, std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool enableValidationLayers) : pWindow(pWindow), vertices(vertices), indices(indices), enableValidationLayers(enableValidationLayers) {};
 
 void VulkanBase::createInstance() {
 
@@ -74,6 +73,7 @@ void VulkanBase::createInstance() {
         throw std::runtime_error("Could not create instance.");
     }
 }
+
 
 std::vector<VkLayerProperties> VulkanBase::getAvailableLayers(bool print) {
 
@@ -403,7 +403,7 @@ void VulkanBase::createCommandBuffers() {
 
         VkClearValue clearValues[2];
         clearValues[0].color = {0.f, 0.f, 0.f, 0.f};
-        clearValues[0].depthStencil.depth = 0.f;
+        clearValues[1].depthStencil.depth = 1.f;
         VkRenderPassBeginInfo  renderPassBeginInfo = {};
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.renderPass = renderPass;
@@ -421,6 +421,7 @@ void VulkanBase::createCommandBuffers() {
     
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertBuffer, offsets);
+    vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32); 
 
     
     VkViewport viewport = {};
@@ -442,7 +443,7 @@ void VulkanBase::createCommandBuffers() {
     vkCmdSetViewport(commandBuffers[i], 0, 1, &viewport);
     vkCmdSetScissor(commandBuffers[i], 0, 1, &scissor);
 
-    vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 
     vkCmdEndRenderPass(commandBuffers[i]);
@@ -471,7 +472,7 @@ void VulkanBase::createDepthBuffer() {
     depthImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     depthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     depthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthImageCreateInfo.queueFamilyIndexCount = 0;
+    depthImageCreateInfo.queueFamilyIndexCount = graphicsQueueIndex;
     depthImageCreateInfo.pQueueFamilyIndices = nullptr;
     depthImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -538,9 +539,12 @@ void VulkanBase::getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t me
 
 void VulkanBase::createUniformBuffer() {
 
-    model = glm::mat4(1.f);
-    projection = glm::perspective(45.f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.f);
-    MVP = projection * view * model;
+    MVP.model = glm::mat4(1.f);
+    //MVP.model[3] = glm::vec4(0.f, 0.f, -10.f, 1.f);
+    cam->updateView();
+    MVP.projection = glm::perspective(45.f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.f);
+    //account for glm y down
+    MVP.projection[1][1] *= -1;
 
     VkBufferCreateInfo uboCreateInfo = {};
     uboCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -743,6 +747,7 @@ void VulkanBase::createFramebuffers() {
 
 void VulkanBase::createVertexBuffer() {
 
+
     VkBufferCreateInfo vertBufferCreateInfo = {};
     vertBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     vertBufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -780,9 +785,48 @@ void VulkanBase::createVertexBuffer() {
 
     std::memcpy(pData, vertices.data(), sizeof(vertices[0]) * vertices.size());
     vkUnmapMemory(device, vertBufferMemory);
+}
 
+void VulkanBase::createIndexBuffer() {
 
-    
+    VkBufferCreateInfo indexBufferCreateInfo = {};
+    indexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    indexBufferCreateInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    indexBufferCreateInfo.size = sizeof(indices[0]) * indices.size();
+    indexBufferCreateInfo.queueFamilyIndexCount = graphicsQueueIndex;
+    indexBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateBuffer(device, &indexBufferCreateInfo, nullptr, &indexBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create index buffer.");
+    }
+
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(device, indexBuffer, &memReqs);
+
+    uint32_t memoryTypeIndex;
+    getMemoryTypeIndex(physicalDevice, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memReqs.size;
+    allocInfo.memoryTypeIndex = memoryTypeIndex;
+
+    if(vkAllocateMemory(device, &allocInfo, nullptr, &indexBufferMemory) != VK_SUCCESS) {
+        throw std::runtime_error("Could not allocate index buffer memory.");
+    }
+
+    if(vkBindBufferMemory(device, indexBuffer, indexBufferMemory, 0) != VK_SUCCESS) {
+        throw std::runtime_error("Could not bind index buffer to memory.");
+    }
+
+    void* pData;
+    if(vkMapMemory(device, indexBufferMemory, 0, memReqs.size, 0, &pData)) {
+        throw std::runtime_error("Could not map index buffer memory.");
+    }
+
+    std::memcpy(pData, indices.data(), sizeof(indices[0]) * indices.size());
+    vkUnmapMemory(device, indexBufferMemory);
+
 }
 
 void VulkanBase::createGraphicsPipeline() {
@@ -831,18 +875,24 @@ void VulkanBase::createGraphicsPipeline() {
     dynamicState.dynamicStateCount = 0;
 
 
-    VkVertexInputAttributeDescription attribDiscription[2];
-    attribDiscription[0] = {};
-    attribDiscription[0].location = 0;
-    attribDiscription[0].binding = 0;
-    attribDiscription[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attribDiscription[0].offset = 0;
+    VkVertexInputAttributeDescription attribDescription[3];
+    attribDescription[0] = {};
+    attribDescription[0].location = 0;
+    attribDescription[0].binding = 0;
+    attribDescription[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribDescription[0].offset = 0;
 
-    attribDiscription[1] = {};
-    attribDiscription[1].location = 1;
-    attribDiscription[1].binding = 0;
-    attribDiscription[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attribDiscription[1].offset = 12;
+    attribDescription[1] = {};
+    attribDescription[1].location = 1;
+    attribDescription[1].binding = 0;
+    attribDescription[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribDescription[1].offset = 12;
+
+    attribDescription[2] = {};
+    attribDescription[2].location = 2;
+    attribDescription[2].binding = 0;
+    attribDescription[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribDescription[2].offset = 24;
 
     VkVertexInputBindingDescription bindingDescription = {};
     bindingDescription.binding = 0;
@@ -852,9 +902,8 @@ void VulkanBase::createGraphicsPipeline() {
 
     VkPipelineVertexInputStateCreateInfo vertInputStateCreateInfo = {};
     vertInputStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    //vertInputStateCreateInfo.vertexAttributeDescriptionCount = 2;
-    vertInputStateCreateInfo.vertexAttributeDescriptionCount = 1;
-    vertInputStateCreateInfo.pVertexAttributeDescriptions = attribDiscription;
+    vertInputStateCreateInfo.vertexAttributeDescriptionCount = 3;
+    vertInputStateCreateInfo.pVertexAttributeDescriptions = attribDescription;
     vertInputStateCreateInfo.vertexBindingDescriptionCount = 1;
     vertInputStateCreateInfo.pVertexBindingDescriptions = &bindingDescription;
 
@@ -867,7 +916,8 @@ void VulkanBase::createGraphicsPipeline() {
     rastCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rastCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
     rastCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-    rastCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    //rastCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rastCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rastCreateInfo.depthClampEnable = VK_FALSE;
     rastCreateInfo.rasterizerDiscardEnable = VK_FALSE;
     rastCreateInfo.depthBiasEnable = VK_FALSE;
@@ -907,10 +957,10 @@ void VulkanBase::createGraphicsPipeline() {
 
     VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = {};
     depthStencilStateCreateInfo.sType =  VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    //depthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
-    depthStencilStateCreateInfo.depthTestEnable = VK_FALSE;
+    depthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
+    //depthStencilStateCreateInfo.depthTestEnable = VK_FALSE;
     depthStencilStateCreateInfo.depthWriteEnable = VK_TRUE;
-    depthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    depthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencilStateCreateInfo.depthBoundsTestEnable = VK_FALSE;
     depthStencilStateCreateInfo.stencilTestEnable = VK_FALSE;
     depthStencilStateCreateInfo.back.failOp = VK_STENCIL_OP_KEEP;
@@ -1015,7 +1065,7 @@ void VulkanBase::createGraphicsPipeline() {
 //TODO: use push constants instead of ubo buffer
 void VulkanBase::updateMVP() {
 
-    MVP = projection * view * model;
+    //MVP = projection * view * model;
     std::memcpy(pUboData, &MVP, sizeof(MVP));
 }
 
@@ -1023,6 +1073,8 @@ void VulkanBase::cleanUp() {
     vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
     vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
     vkDestroyPipeline(device, pipeline, nullptr);
+    vkFreeMemory(device, indexBufferMemory, nullptr);
+    vkDestroyBuffer(device, indexBuffer, nullptr);
     vkFreeMemory(device, vertBufferMemory, nullptr);
     vkDestroyBuffer(device, vertBuffer, nullptr);
     for(VkFramebuffer framebuffer : framebuffers) {

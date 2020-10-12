@@ -9,8 +9,8 @@ obj=$(src:.cpp=.o)
 
 prog=vulest
 
-$(prog): $(obj) $(headers)
-#$(prog): $(obj)
+#$(prog): $(obj) $(headers)
+$(prog): $(obj)
 	$(CC) $(CFLAGS) -g -o  $@ $^ $(LDFLAGS)
 
 .PHONY: test clean

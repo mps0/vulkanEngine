@@ -7,7 +7,6 @@
 Window::Window() {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS); 
     SDLwindow =SDL_CreateWindow("vulkan test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_VULKAN);
-
 }
 
 std::vector<const char*> Window::getRequiredVulkanExtensions(bool print) {

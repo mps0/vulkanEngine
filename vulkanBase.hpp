@@ -10,17 +10,14 @@
 
 #include "window.hpp"
 #include "camera.hpp"
+#include "vertex.hpp"
 
 
 class VulkanBase {
     public:
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 projection;
-        glm::mat4 MVP;
-        Camera* cam = new Camera(&view);
+        Camera* cam = new Camera(&MVP.view);
 
-        VulkanBase(Window* pWindow, bool enableValidationLayers);
+        VulkanBase(Window* pWindow, std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool enableValidationLayers);
         void createInstance();
         std::vector<VkLayerProperties>getAvailableLayers(bool print);
         std::vector<const char*>getRequiredLayers(bool print);
@@ -48,6 +45,7 @@ class VulkanBase {
         void createFramebuffers();
 
         void createVertexBuffer();
+        void createIndexBuffer();
 
         void createGraphicsPipeline();
 
@@ -64,6 +62,15 @@ class VulkanBase {
     private:
 
         bool enableValidationLayers;
+
+        struct uniformBufferObject{
+            glm::mat4 model;
+            glm::mat4 view;
+            glm::mat4 projection;
+        };
+
+        uniformBufferObject MVP = {};
+
         std::vector<const char*> requiredLayers;
         std::vector<const char*> requiredInstanceExtensions;
         std::vector<const char*> requiredDeviceExtensions = {"VK_KHR_swapchain"};
@@ -71,6 +78,9 @@ class VulkanBase {
         uint32_t presentQueueIndex;
         std::set<uint32_t> uniqueQueues;
 
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+ 
         Window* pWindow;
         VkInstance instance;
         VkPhysicalDevice physicalDevice;
@@ -109,6 +119,8 @@ class VulkanBase {
 
         VkBuffer vertBuffer;
         VkDeviceMemory vertBufferMemory;
+        VkBuffer indexBuffer;
+        VkDeviceMemory indexBufferMemory;
 
         VkPipeline pipeline;
 

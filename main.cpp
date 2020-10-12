@@ -2,12 +2,30 @@
 #include "vulkanBase.hpp"
 
 #include <iostream>
+#include "obj.hpp"
 
 
 int main() {
 
+
     Window window = Window();
-    VulkanBase base = VulkanBase(&window, true);
+    //std::vector<Vertex> vertices;
+    //std::vector<uint32_t> indices;
+    //obj(vertices, indices);
+    std::vector<Vertex> vertices = {
+        {{-0.5f, -0.5f, -1.f}, {0.0f, 1.0f, 0.0f}, {0.f, 0.f, 1.f}},
+        {{0.5f, -0.5f, -1.f}, {0.0f, 1.0f, 0.0f},  {0.f, 0.f, 1.f}},
+        {{-0.5f, 0.5f, -1.f}, {0.0f, 1.0f, 0.0f},  {0.f, 0.f, 1.f}},
+        {{0.5f, 0.5f, -1.f}, {0.0f, 1.0f, 0.0f},  {0.f, 0.f, 1.f}}
+
+    };
+
+
+    std::vector<uint32_t> indices = {
+        2, 0, 3, 3, 0, 1
+    };
+
+    VulkanBase base = VulkanBase(&window, vertices, indices, true);
     base.createInstance();
     base.createSurface();
     base.createLogicalDevice();
@@ -18,10 +36,14 @@ int main() {
     base.createDescriptorSet();
     base.createRenderPass();
     base.createVertexBuffer();
+    base.createIndexBuffer();
     base.createGraphicsPipeline();
     base.createFramebuffers();
     base.createCommandBuffers();
     base.createSyncObjects();
+
+
+
 
     SDL_Event event;
     bool run = true;
@@ -37,7 +59,7 @@ int main() {
                                          unsigned int button = SDL_GetMouseState(NULL, NULL);
                                          if (button & SDL_BUTTON(SDL_BUTTON_LEFT)) {
                                              base.cam->yaw(event.motion.xrel);
-                                             base.cam->pitch(event.motion.yrel);
+                                             base.cam->pitch(-event.motion.yrel);
                                              base.updateMVP();
                                          }
                                          else if (button & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
