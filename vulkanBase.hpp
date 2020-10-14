@@ -15,7 +15,7 @@
 
 class VulkanBase {
     public:
-        Camera* cam = new Camera(&MVP.view);
+        Camera* cam = new Camera(&MVP.view, glm::vec3(0.f, -.7071f, -.7071f), glm::vec3(0.f, .7071f, -.7071f), glm::vec3(0.f, 1.f, 0.f));
 
         VulkanBase(Window* pWindow, std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool enableValidationLayers);
         void createInstance();
