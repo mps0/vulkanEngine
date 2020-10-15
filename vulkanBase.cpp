@@ -13,7 +13,12 @@
 #include <vulkan/vulkan_core.h>
 
 
-VulkanBase::VulkanBase(Window* pWindow, std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool enableValidationLayers) : pWindow(pWindow), vertices(vertices), indices(indices), enableValidationLayers(enableValidationLayers) {};
+VulkanBase::VulkanBase(Window* pWindow, Scene* pScene, bool enableValidationLayers) : pWindow(pWindow), pScene(pScene), enableValidationLayers(enableValidationLayers) {
+
+vertices = *(pScene->getVerts());
+indices = *(pScene->getInds());
+
+};
 
 void VulkanBase::createInstance() {
 
@@ -419,9 +424,6 @@ void VulkanBase::createCommandBuffers() {
 
     vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, descriptorSets.data(), 0, nullptr);
     
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertBuffer, offsets);
-    vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32); 
 
     
     VkViewport viewport = {};
@@ -443,8 +445,22 @@ void VulkanBase::createCommandBuffers() {
     vkCmdSetViewport(commandBuffers[i], 0, 1, &viewport);
     vkCmdSetScissor(commandBuffers[i], 0, 1, &scissor);
 
-    vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, &vertBuffer, offsets);
 
+
+    vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32); 
+    
+
+    uint32_t start = 0;
+    uint32_t end;
+    for(size_t j = 0; j < pScene->getModelCount(); j++) { 
+        end = pScene->modelMarkers[j];
+        uint32_t num = end - start;
+        vkCmdDrawIndexed(commandBuffers[i], num, 1, start, 0, 0);
+        start = end;
+    }
 
     vkCmdEndRenderPass(commandBuffers[i]);
 

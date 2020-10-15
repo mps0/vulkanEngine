@@ -11,13 +11,14 @@
 #include "window.hpp"
 #include "camera.hpp"
 #include "vertex.hpp"
+#include "model.hpp"
 
 
 class VulkanBase {
     public:
         Camera* cam = new Camera(&MVP.view, glm::vec3(0.f, -.7071f, -.7071f), glm::vec3(0.f, .7071f, -.7071f), glm::vec3(0.f, 1.f, 0.f));
 
-        VulkanBase(Window* pWindow, std::vector<Vertex> vertices, std::vector<uint32_t> indices, bool enableValidationLayers);
+        VulkanBase(Window* pWindow, Scene* pScene, bool enableValidationLayers);
         void createInstance();
         std::vector<VkLayerProperties>getAvailableLayers(bool print);
         std::vector<const char*>getRequiredLayers(bool print);
@@ -60,8 +61,9 @@ class VulkanBase {
         void cleanUp();
 
     private:
-
         bool enableValidationLayers;
+
+        Scene* pScene;
 
         struct uniformBufferObject{
             glm::mat4 model;

@@ -1,6 +1,7 @@
 #include "window.hpp"
 #include "vulkanBase.hpp"
 #include "obj.hpp"
+#include "model.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -11,9 +12,15 @@ int main() {
 
 
     Window window = Window();
+    Scene scene = Scene();
+
     std::vector<Vertex> objVertices;
     std::vector<uint32_t> objIndices;
     obj(objVertices, objIndices);
+       
+    Model objModel = Model(objVertices, objIndices);
+    scene.pushbackModel(&objModel);
+
     std::vector<Vertex> planeVertices = {
         {{-10.f, 0.f, 0.f}, {0.0f, 1.0f, 0.0f}, {0.f, 1.f, 0.f}},
         {{10.f, 0.f, 0.f}, {0.0f, 1.0f, 0.0f},  {0.f, 1.f, 0.f}},
@@ -22,26 +29,14 @@ int main() {
 
     };
 
-
     std::vector<uint32_t> planeIndices = {
         2, 0, 3, 3, 0, 1
     };
-    uint32_t numVerts = objVertices.size();
-    std::transform(planeIndices.begin(), planeIndices.end(), planeIndices.begin(), [numVerts](uint32_t i) {return i + numVerts;});
+    Model plane = Model(planeVertices, planeIndices);
+    scene.pushbackModel(&plane);
 
-
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t>indices;
-    
-    vertices.insert(vertices.end(), objVertices.begin(), objVertices.end());
-    indices.insert(indices.end(), objIndices.begin(), objIndices.end());
-
-    vertices.insert(vertices.end(), planeVertices.begin(), planeVertices.end());
-    indices.insert(indices.end(), planeIndices.begin(), planeIndices.end());
-
-
-
-    VulkanBase base = VulkanBase(&window, vertices, indices, true);
+     
+    VulkanBase base = VulkanBase(&window, &scene, true);
     base.createInstance();
     base.createSurface();
     base.createLogicalDevice();
