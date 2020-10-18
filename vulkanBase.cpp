@@ -422,8 +422,6 @@ void VulkanBase::createCommandBuffers() {
     vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 2, descriptorSets.data(), 0, nullptr);
-    
 
     
     VkViewport viewport = {};
@@ -452,10 +450,16 @@ void VulkanBase::createCommandBuffers() {
 
     vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32); 
     
+    uint32_t dynamicOffsets[2];
+    dynamicOffsets[0] = 0;
+    dynamicOffsets[1] = sizeof(models[0]);
+
+    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSets[1], 0, nullptr);
 
     uint32_t start = 0;
     uint32_t end;
     for(size_t j = 0; j < pScene->getModelCount(); j++) { 
+    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[0], 1, &dynamicOffsets[j]);
         end = pScene->modelMarkers[j];
         uint32_t num = end - start;
         vkCmdDrawIndexed(commandBuffers[i], num, 1, start, 0, 0);
@@ -555,10 +559,10 @@ void VulkanBase::getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t me
 
 void VulkanBase::createUniformBuffers() {
 
-    models = glm::mat4(1.f);
-    //models[0] = glm::mat4(1.f);
-    //models[1] = glm::mat4(1.f);
-    //MVP.model[3] = glm::vec4(0.f, 0.f, -10.f, 1.f);
+    models.resize(2);
+    models[0] = glm::mat4(1.f);
+    models[0][3] = glm::vec4(0.f, 1.f, -10.f, 1.f);
+    models[1] = glm::mat4(1.f);
     cam->updateView();
     VP.projection = glm::perspective(45.f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.f);
     //account for glm y down
@@ -567,7 +571,7 @@ void VulkanBase::createUniformBuffers() {
         VkBufferCreateInfo uboCreateInfoM = {};
         uboCreateInfoM.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         uboCreateInfoM.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        uboCreateInfoM.size = sizeof(models);
+        uboCreateInfoM.size = sizeof(models[0]) * models.size();
         uboCreateInfoM.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         ubo.resize(2);
@@ -601,8 +605,8 @@ void VulkanBase::createUniformBuffers() {
             throw std::runtime_error("Could not map ubo memory.");
         }
 
-        //std::memcpy(pUboData[0], models.data(), sizeof(models[0]) * models.size());
-        std::memcpy(pUboData[0], &models, sizeof(models));
+        std::memcpy(pUboData[0], models.data(), sizeof(models[0]) * models.size());
+
 
         VkBufferCreateInfo uboCreateInfo = {};
         uboCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -647,7 +651,7 @@ void VulkanBase::createDescriptorSet() {
     VkDescriptorSetLayoutBinding layoutBindings[2];
     layoutBindings[0] = {};
     layoutBindings[0].binding = 0;
-    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     layoutBindings[0].descriptorCount = 1;
     layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
@@ -718,7 +722,7 @@ void VulkanBase::createDescriptorSet() {
    VkDescriptorBufferInfo uboInfoM = {};
    uboInfoM.buffer = ubo[0];
    uboInfoM.offset = 0;
-   uboInfoM.range = sizeof(models[0]);
+   uboInfoM.range = sizeof(models);
 
    VkDescriptorBufferInfo uboInfoVP = {};
    uboInfoVP.buffer = ubo[1];
@@ -732,7 +736,7 @@ void VulkanBase::createDescriptorSet() {
    writeDescriptorSets[0].dstBinding = 0;
    writeDescriptorSets[0].dstArrayElement = 0;
    writeDescriptorSets[0].descriptorCount = 1;
-   writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
    writeDescriptorSets[0].pBufferInfo = &uboInfoM;
   // writeDescriptorSets[0].pBufferInfo = &uboInfoVP;
 

@@ -20,14 +20,7 @@ void main() {
 
     float cosTerm = max(-dot(lightDir, fragNormal), 0.f);
 
-    outColor = vec4(5.f * lightIntensity * cosTerm * fragColor, 1.f);
+    outColor = vec4(10.f * lightIntensity * cosTerm * fragColor, 1.f);
     
-    //vec3 lightPos = vec3(0.f, 0.f, -7.f);
-    //vec3 lightVec = fragPos - lightPos;
-    //float lightDistSq = dot(lightVec, lightVec);
-    //float inv = 1 / lightDistSq;
-
-
-    //outColor = vec4(inv * fragColor, 1.f);
     
 }

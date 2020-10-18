@@ -66,8 +66,7 @@ class VulkanBase {
         Scene* pScene;
 
 
-        //std::vector<glm::mat4> models;
-        glm::mat4 models;
+        std::vector<glm::mat4> models;
 
         struct uboVP{
             glm::mat4 view;
