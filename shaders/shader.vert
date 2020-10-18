@@ -10,17 +10,20 @@ layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec3 fragNormal;
 layout(location = 2) out vec3 fragPos;
 
-layout (std140, binding = 0) uniform buf {
+layout (std140, set = 0, binding = 0) uniform bufM {
     mat4 model;
+} uboM;
+
+layout (std140, set = 1, binding = 0) uniform bufVP {
     mat4 view;
     mat4 projection;
-} ubo;
+} uboVP;
 
 void main() {
 
-    mat4 MVP = ubo.projection * ubo.view * ubo.model;
+    mat4 MVP = uboVP.projection * uboVP.view * uboM.model;
     gl_Position = MVP * vec4(pos, 1.f);
     fragColor = color;
     fragNormal = normal;
-    fragPos = vec3(ubo.model * vec4(pos, 1.f));
+    fragPos = vec3(uboM.model * vec4(pos, 1.f));
 }

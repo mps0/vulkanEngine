@@ -16,7 +16,7 @@
 
 class VulkanBase {
     public:
-        Camera* cam = new Camera(&MVP.view, glm::vec3(0.f, -.7071f, -.7071f), glm::vec3(0.f, .7071f, -.7071f), glm::vec3(0.f, 1.f, 0.f));
+        Camera* cam = new Camera(&VP.view, glm::vec3(0.f, -.7071f, -.7071f), glm::vec3(0.f, .7071f, -.7071f), glm::vec3(0.f, 1.f, 0.f));
 
         VulkanBase(Window* pWindow, Scene* pScene, bool enableValidationLayers);
         void createInstance();
@@ -40,7 +40,7 @@ class VulkanBase {
         void createCommandBuffers(); 
         void createDepthBuffer();
         void getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t memoryFlagBitMask, uint32_t &memoryTypeIndex);
-        void createUniformBuffer();
+        void createUniformBuffers();
         void createDescriptorSet();
         void createRenderPass();
         void createFramebuffers();
@@ -65,13 +65,16 @@ class VulkanBase {
 
         Scene* pScene;
 
-        struct uniformBufferObject{
-            glm::mat4 model;
+
+        //std::vector<glm::mat4> models;
+        glm::mat4 models;
+
+        struct uboVP{
             glm::mat4 view;
             glm::mat4 projection;
         };
 
-        uniformBufferObject MVP = {};
+        uboVP VP = {};
 
         std::vector<const char*> requiredLayers;
         std::vector<const char*> requiredInstanceExtensions;
@@ -103,11 +106,11 @@ class VulkanBase {
         VkDeviceMemory depthMemory;
         VkImageView depthImageView;
 
-        VkBuffer ubo;
-        VkDeviceMemory uboMemory;
-        void* pUboData;
+        std::vector<VkBuffer> ubo;
+        std::vector<VkDeviceMemory> uboMemory;
+        std::vector<void*> pUboData;
 
-        VkDescriptorSetLayout descriptorSetLayout;
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
         VkDescriptorPool descriptorPool;
         VkPipelineLayout pipelineLayout;
         std::vector<VkDescriptorSet> descriptorSets;

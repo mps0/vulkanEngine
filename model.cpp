@@ -7,15 +7,13 @@
 Model::Model(std::vector<Vertex> vertices, std::vector<uint32_t> indices, glm::mat4 model) : vertices(vertices), indices(indices), model(model) {} 
 
 
-std::vector<Vertex>* Model::getVerts() {
-    return &vertices;
+std::vector<Vertex> Model::getVerts() {
+    return vertices;
 }
 
-std::vector<uint32_t>* Model::getInds() {
-    return &indices;
+std::vector<uint32_t> Model::getInds() {
+    return indices;
 }
-
-
 
 
 
@@ -23,15 +21,14 @@ Scene::Scene() {}
 
 void Scene::pushbackModel(Model* pModel) {
 
-    std::vector<Vertex>* pVerts = pModel->getVerts();
-    std::vector<uint32_t>* pInds = pModel->getInds();
+    std::vector<Vertex> verts = pModel->getVerts();
+    std::vector<uint32_t> inds = pModel->getInds();
 
-    std::transform(pInds->begin(), pInds->end(), pInds->begin(), [this](uint32_t i) {return i + offset;});
+    std::transform(inds.begin(), inds.end(), inds.begin(), [this](uint32_t i) {return i + vertices.size();});
 
-    vertices.insert(vertices.end(), pVerts->begin(), pVerts->end());
-    indices.insert(indices.end(), pInds->begin(), pInds->end());
+    vertices.insert(vertices.end(), verts.begin(), verts.end());
+    indices.insert(indices.end(), inds.begin(), inds.end());
 
-    offset = vertices.size();
     modelCount++;
     modelMarkers.push_back(indices.size());
 }

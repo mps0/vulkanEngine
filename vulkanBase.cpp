@@ -422,7 +422,7 @@ void VulkanBase::createCommandBuffers() {
     vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, descriptorSets.data(), 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 2, descriptorSets.data(), 0, nullptr);
     
 
     
@@ -553,66 +553,128 @@ void VulkanBase::getMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t me
     throw std::runtime_error("Could not find suitable memory type.");
 }
 
-void VulkanBase::createUniformBuffer() {
+void VulkanBase::createUniformBuffers() {
 
-    MVP.model = glm::mat4(1.f);
+    models = glm::mat4(1.f);
+    //models[0] = glm::mat4(1.f);
+    //models[1] = glm::mat4(1.f);
     //MVP.model[3] = glm::vec4(0.f, 0.f, -10.f, 1.f);
     cam->updateView();
-    MVP.projection = glm::perspective(45.f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.f);
+    VP.projection = glm::perspective(45.f, (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.f);
     //account for glm y down
-    MVP.projection[1][1] *= -1;
+    VP.projection[1][1] *= -1;
 
-    VkBufferCreateInfo uboCreateInfo = {};
-    uboCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    uboCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    uboCreateInfo.size = sizeof(MVP);
-    uboCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        VkBufferCreateInfo uboCreateInfoM = {};
+        uboCreateInfoM.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        uboCreateInfoM.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        uboCreateInfoM.size = sizeof(models);
+        uboCreateInfoM.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if(vkCreateBuffer(device, &uboCreateInfo, nullptr, &ubo) != VK_SUCCESS) {
-        throw std::runtime_error("Could not create UBO.");
-    }
+        ubo.resize(2);
+        if(vkCreateBuffer(device, &uboCreateInfoM, nullptr, &ubo[0]) != VK_SUCCESS) {
+            throw std::runtime_error("Could not create UBO.");
+        }
 
-    VkMemoryRequirements uboMemReqs;
-    vkGetBufferMemoryRequirements(device, ubo, &uboMemReqs);
+        VkMemoryRequirements uboMemReqsM;
+        vkGetBufferMemoryRequirements(device, ubo[0], &uboMemReqsM);
 
-    uint32_t memoryTypeIndex;
-    getMemoryTypeIndex(physicalDevice, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex);
+        uint32_t memoryTypeIndexM;
+        getMemoryTypeIndex(physicalDevice, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndexM);
 
-    VkMemoryAllocateInfo uboAllocInfo = {};
-    uboAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    uboAllocInfo.allocationSize = uboMemReqs.size;
-    uboAllocInfo.memoryTypeIndex = memoryTypeIndex;
+        VkMemoryAllocateInfo uboAllocInfoM = {};
+        uboAllocInfoM.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        uboAllocInfoM.allocationSize = uboMemReqsM.size;
+        uboAllocInfoM.memoryTypeIndex = memoryTypeIndexM;
 
-    if(vkAllocateMemory(device, &uboAllocInfo, nullptr, &uboMemory) != VK_SUCCESS) {
-        throw std::runtime_error("Could not allocate UBO memory.");
-    }
+        uboMemory.resize(2);
+        if(vkAllocateMemory(device, &uboAllocInfoM, nullptr, &uboMemory[0]) != VK_SUCCESS) {
+            throw std::runtime_error("Could not allocate UBO memory.");
+        }
 
-    if(vkBindBufferMemory(device, ubo, uboMemory, 0) != VK_SUCCESS) {
-        throw std::runtime_error("Could not bind ubo to memory.");
-    }
+        if(vkBindBufferMemory(device, ubo[0], uboMemory[0], 0) != VK_SUCCESS) {
+            throw std::runtime_error("Could not bind ubo to memory.");
+        }
 
-    //void* pData;
-    if(vkMapMemory(device, uboMemory, 0, uboMemReqs.size, 0, &pUboData)) {
-        throw std::runtime_error("Could not map ubo memory.");
-    }
+        //void* pData;
+        pUboData.resize(2);
+        if(vkMapMemory(device, uboMemory[0], 0, uboMemReqsM.size, 0, &pUboData[0])) {
+            throw std::runtime_error("Could not map ubo memory.");
+        }
+
+        //std::memcpy(pUboData[0], models.data(), sizeof(models[0]) * models.size());
+        std::memcpy(pUboData[0], &models, sizeof(models));
+
+        VkBufferCreateInfo uboCreateInfo = {};
+        uboCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        uboCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        uboCreateInfo.size = sizeof(VP);
+       uboCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if(vkCreateBuffer(device, &uboCreateInfo, nullptr, &ubo[1]) != VK_SUCCESS) {
+            throw std::runtime_error("Could not create UBO.");
+        }
+
+        VkMemoryRequirements uboMemReqs;
+        vkGetBufferMemoryRequirements(device, ubo[1], &uboMemReqs);
+
+        uint32_t memoryTypeIndex;
+        getMemoryTypeIndex(physicalDevice, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex);
+
+        VkMemoryAllocateInfo uboAllocInfo = {};
+        uboAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        uboAllocInfo.allocationSize = uboMemReqs.size;
+        uboAllocInfo.memoryTypeIndex = memoryTypeIndex;
+
+        if(vkAllocateMemory(device, &uboAllocInfo, nullptr, &uboMemory[1]) != VK_SUCCESS) {
+            throw std::runtime_error("Could not allocate UBO memory.");
+        }
+
+        if(vkBindBufferMemory(device, ubo[1], uboMemory[1], 0) != VK_SUCCESS) {
+            throw std::runtime_error("Could not bind ubo to memory.");
+        }
+
+        //void* pData;
+        if(vkMapMemory(device, uboMemory[1], 0, uboMemReqs.size, 0, &pUboData[1])) {
+            throw std::runtime_error("Could not map ubo memory.");
+        }
+    
 
     updateMVP();
 }
 
 void VulkanBase::createDescriptorSet() {
 
-    VkDescriptorSetLayoutBinding layoutBinding = {};
-    layoutBinding.binding = 0;
-    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layoutBinding.descriptorCount = 1;
-    layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    VkDescriptorSetLayoutBinding layoutBindings[2];
+    layoutBindings[0] = {};
+    layoutBindings[0].binding = 0;
+    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBindings[0].descriptorCount = 1;
+    layoutBindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
-    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutCreateInfo.bindingCount = 1;
-    layoutCreateInfo.pBindings = &layoutBinding;
+    layoutBindings[1] = {};
+    layoutBindings[1].binding = 0;
+    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBindings[1].descriptorCount = 1;
+    layoutBindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    if(vkCreateDescriptorSetLayout(device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+    VkDescriptorSetLayoutCreateInfo layoutCreateInfos[2];
+    layoutCreateInfos[0] = {};
+    layoutCreateInfos[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutCreateInfos[0].bindingCount = 1;
+    layoutCreateInfos[0].pBindings = &layoutBindings[0];
+
+    layoutCreateInfos[1] = {};
+    layoutCreateInfos[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutCreateInfos[1].bindingCount = 1;
+    layoutCreateInfos[1].pBindings = &layoutBindings[1];
+
+
+    descriptorSetLayouts.resize(2);
+    if(vkCreateDescriptorSetLayout(device, &layoutCreateInfos[0], nullptr, &descriptorSetLayouts[0]) != VK_SUCCESS) {
+        throw std::runtime_error("Could not create descriptor set layout.");
+    }
+
+    if(vkCreateDescriptorSetLayout(device, &layoutCreateInfos[1], nullptr, &descriptorSetLayouts[1]) != VK_SUCCESS) {
         throw std::runtime_error("Could not create descriptor set layout.");
     }
 
@@ -620,8 +682,8 @@ void VulkanBase::createDescriptorSet() {
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
-    pipelineLayoutCreateInfo.setLayoutCount = 1;
-    pipelineLayoutCreateInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutCreateInfo.setLayoutCount = 2;
+    pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
     if(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("Could not create pipelinay layout.");
@@ -630,11 +692,11 @@ void VulkanBase::createDescriptorSet() {
     
    VkDescriptorPoolSize poolSizes[1];
    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   poolSizes[0].descriptorCount = 1;
+   poolSizes[0].descriptorCount = 2;
 
    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-   descriptorPoolCreateInfo.maxSets = 1;
+   descriptorPoolCreateInfo.maxSets = 2;
    descriptorPoolCreateInfo.poolSizeCount = 1;
    descriptorPoolCreateInfo.pPoolSizes = poolSizes;
 
@@ -645,20 +707,25 @@ void VulkanBase::createDescriptorSet() {
    VkDescriptorSetAllocateInfo descriptorSetAllocInfo = {};
    descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
    descriptorSetAllocInfo.descriptorPool = descriptorPool;
-   descriptorSetAllocInfo.descriptorSetCount = 1;
-   descriptorSetAllocInfo.pSetLayouts = &descriptorSetLayout;
+   descriptorSetAllocInfo.descriptorSetCount = 2;
+   descriptorSetAllocInfo.pSetLayouts = descriptorSetLayouts.data();
 
    descriptorSets.resize(descriptorSetAllocInfo.descriptorSetCount);
-   if(vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, descriptorSets.data()) != VK_SUCCESS) {
+   if(vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, descriptorSets.data() ) != VK_SUCCESS) {
        throw std::runtime_error("Could not allocate descriptor sets.");
    }
 
-   VkDescriptorBufferInfo uboInfo = {};
-   uboInfo.buffer = ubo;
-   uboInfo.offset = 0;
-   uboInfo.range = sizeof(MVP);
+   VkDescriptorBufferInfo uboInfoM = {};
+   uboInfoM.buffer = ubo[0];
+   uboInfoM.offset = 0;
+   uboInfoM.range = sizeof(models[0]);
 
-   VkWriteDescriptorSet writeDescriptorSets[1];
+   VkDescriptorBufferInfo uboInfoVP = {};
+   uboInfoVP.buffer = ubo[1];
+   uboInfoVP.offset = 0;
+   uboInfoVP.range = sizeof(VP);
+
+   VkWriteDescriptorSet writeDescriptorSets[2];
    writeDescriptorSets[0] = {};
    writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
    writeDescriptorSets[0].dstSet = descriptorSets[0];
@@ -666,9 +733,19 @@ void VulkanBase::createDescriptorSet() {
    writeDescriptorSets[0].dstArrayElement = 0;
    writeDescriptorSets[0].descriptorCount = 1;
    writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   writeDescriptorSets[0].pBufferInfo = &uboInfo;
+   writeDescriptorSets[0].pBufferInfo = &uboInfoM;
+  // writeDescriptorSets[0].pBufferInfo = &uboInfoVP;
 
-   vkUpdateDescriptorSets(device, 1, writeDescriptorSets, 0, nullptr);
+   writeDescriptorSets[1] = {};
+   writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   writeDescriptorSets[1].dstSet = descriptorSets[1];
+   writeDescriptorSets[1].dstBinding = 0;
+   writeDescriptorSets[1].dstArrayElement = 0;
+   writeDescriptorSets[1].descriptorCount = 1;
+   writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   writeDescriptorSets[1].pBufferInfo = &uboInfoVP;
+
+   vkUpdateDescriptorSets(device, 2, writeDescriptorSets, 0, nullptr);
 }
 
 void VulkanBase::createRenderPass() {
@@ -1014,7 +1091,7 @@ void VulkanBase::createGraphicsPipeline() {
     pipelineCreateInfo.renderPass = renderPass;
     pipelineCreateInfo.subpass = 0;
 
-    if(vkCreateGraphicsPipelines(device, nullptr, 1,&pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if(vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         throw std::runtime_error("Could not create pipeline.");
     }
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
@@ -1082,7 +1159,7 @@ void VulkanBase::createGraphicsPipeline() {
 void VulkanBase::updateMVP() {
 
     //MVP = projection * view * model;
-    std::memcpy(pUboData, &MVP, sizeof(MVP));
+    std::memcpy(pUboData[1], &VP, sizeof(VP));
 }
 
 void VulkanBase::cleanUp() {
@@ -1097,12 +1174,16 @@ void VulkanBase::cleanUp() {
         vkDestroyFramebuffer(device, framebuffer, nullptr);
     }
     vkDestroyRenderPass(device, renderPass, nullptr);
-    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+    for(VkDescriptorSetLayout descriptorSetLayout : descriptorSetLayouts) {
+        vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+    }
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
-    vkFreeMemory(device, uboMemory, nullptr);
-    vkDestroyBuffer(device, ubo, nullptr);
+    vkFreeMemory(device, uboMemory[0], nullptr);
+    vkDestroyBuffer(device, ubo[0], nullptr);
+    vkFreeMemory(device, uboMemory[1], nullptr);
+    vkDestroyBuffer(device, ubo[1], nullptr);
     delete cam;
     vkDestroyImageView(device, depthImageView, nullptr);
     vkDestroyImage(device, depthImage, nullptr);

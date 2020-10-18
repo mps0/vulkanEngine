@@ -43,7 +43,7 @@ int main() {
     base.createSwapchain();
     base.createImageViews();
     base.createDepthBuffer();
-    base.createUniformBuffer();
+    base.createUniformBuffers();
     base.createDescriptorSet();
     base.createRenderPass();
     base.createVertexBuffer();
